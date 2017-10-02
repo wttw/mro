@@ -1,4 +1,6 @@
-package {{.Param.package}}
+package [[.package]]
+
+//go:generate mro
 
 import (
     "github.com/jackc/pgx"

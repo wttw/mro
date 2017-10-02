@@ -50,11 +50,11 @@ func bootstrap(style string) {
 			log.Fatalf("Failed to load embedded asset: %s\n", err)
 		}
 
-		if strings.HasSuffix(filename, ".go.tpl") {
-			outfile := strings.TrimSuffix(filename, ".tpl")
-			tpl, err := template.New("global").Funcs(funcs).Parse(string(content))
+		if strings.HasSuffix(filename, ".mrotpl") {
+			outfile := strings.TrimSuffix(filename, ".mrotpl")
+			tpl, err := template.New("global").Funcs(funcs).Delims("[[", "]]").Parse(string(content))
 			if err != nil {
-				log.Fatalf("failed to parse global template: %s", err)
+				log.Fatalf("failed to parse template %s: %s", filename, err)
 			}
 			f, err := os.Create(outfile)
 			if err != nil {
@@ -62,13 +62,12 @@ func bootstrap(style string) {
 			}
 			cwd, _ := os.Getwd()
 
-			tpl.Execute(f, struct {
-				Param map[string]interface{}
-			}{
-				Param: map[string]interface{}{
-					"package": path.Base(cwd),
-				},
+			err = tpl.Execute(f, map[string]interface{}{
+				"package": path.Base(cwd),
 			})
+			if err != nil {
+				log.Fatalf("failed to execute template %s: %s", filename, err)
+			}
 			f.Close()
 			tidyFile(outfile)
 			continue

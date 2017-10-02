@@ -78,17 +78,37 @@ TableFilename= "{{.Name}}.mro.go"
 # Use this template to generate table code.
 TableTemplate = "table.pgx.tpl"
 
-# Write global code to this filename.
-GlobalFilename = "mropgx.go"
-
-# Use this template to generate global code
-GlobalTemplate = "global.pgx.tpl"
+# Avoid using these names as function parameters
+# ReservedNames = []
 
 # Run these commands on each file after generation
 PostProcess = ["goimports -w"]
 
 TemplateParameters {
     # Add any additional template parameters here
+}
+
+# Generate "select * from table where primary_key = ?" queries
+GeneratePKQueries = true
+
+# Generate "select * from table where primary_key = ?" queries
+GenerateUniqueQueries = true
+
+# Table specific settings
+Table {
+# # For the table "config"
+# config {
+#    # Use only these columns
+#    IncludeColumns = []
+#    # Don't use these columnd
+#    ExcludeColumns = []
+#    # Use my.GoType for column_name, rather than whatever is in the Types section
+#    ColumnType {
+#       column_name = "my.GoType"
+#    }
+#    # Generate everything as though the table was called this instead
+#    Rename = "app_configuration"
+# }
 }
 
 Queries {
@@ -100,4 +120,7 @@ Queries {
     # customize the name and type it uses, e.g.:
     #
     #    ConfigByID = "select * from config where id = $1 /* configID int */"
+    #
+    # Including the string "/* singlerow */" or "/* multirow */" in the query will override
+    # mro's heuristics and generate code to return a single row or a slice of rows.
 }

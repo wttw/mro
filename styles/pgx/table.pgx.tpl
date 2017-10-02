@@ -20,6 +20,7 @@ type {{$goname}} struct { {{- range $f := .Table.Fields}}
 const {{$goname}}Columns = `{{join (maybequote .Table.Fields) ", "}}`
 
 {{if .Table.IDField.Name}}
+{{if .Table.IDField.HasDefault}}
 // Insert a {{$goname}} into the database
 func (t *{{$goname}}) Insert(db MRODB) error {
     {{- $dfields := excludefield .Table.Fields .Table.IDField}}
@@ -34,6 +35,21 @@ func (t *{{$goname}}) Insert(db MRODB) error {
     }
     return nil
 }
+{{else}}
+// Insert a {{$goname}} into the database
+func (t *{{$goname}}) Insert(db MRODB) error {
+    const sql = `insert into {{ $stable }} (` +
+      `{{join (maybequote .Table.Fields) ", "}}` +
+      `) values (` +
+      `{{join (bindvars .Table.Fields) ", "}}` +
+      `)`
+    _, err := db.Exec(sql, {{join (gonames .Table.Fields "t.") ", "}})
+    if err != nil {
+        return err
+    }
+    return nil
+}
+{{end}}{{/* IDField.HasDefault */}}
 
 // Update an existing {{$goname}} in the database
 func (t *{{$goname}}) Update(db MRODB) error {
@@ -71,7 +87,7 @@ func (t *{{$goname}}) Delete(db MRODB) error {
     _, err := db.Exec(sql, t.{{goname .Table.IDField.Name}})
     return err
 }
-{{else}}
+{{else}}{{/* IDField.Name */}}
 // Insert a {{$goname}} into the database
 func (t *{{$goname}}) Insert(db MRODB) error {
     const sql = `insert into {{ $stable }} (` +
@@ -79,15 +95,15 @@ func (t *{{$goname}}) Insert(db MRODB) error {
       `) values (` +
       `{{join (bindvars .Table.Fields) ", "}}` +
       `)`
-    _, err := db.Query(sql, {{join (gonames .Table.Fields "t.") ", "}})
+    _, err := db.Exec(sql, {{join (gonames .Table.Fields "t.") ", "}})
     if err != nil {
         return err
     }
     return nil
 }
-{{end}}
+{{end}}{{/* IDField.Name */}}
 
-func FetchAll{{$goname}}(db MRODB) ([]{{$goname}}, error) {
+func All{{$goname}}(db MRODB) ([]{{$goname}}, error) {
     const sql = `select ` +
       `{{join (maybequote .Table.Fields) ", "}}` +
       `from {{$stable}}`
@@ -138,7 +154,7 @@ func {{$q.Name}}(db MRODB{{range $p := $q.Parameters -}}
   const sql = `{{$q.Query}}`
   var row {{$goname}}
   err := db.QueryRow(sql, {{join (names $q.Parameters) ", "}}).Scan({{join (gonames $t.Fields "&row.") ", "}})
-  return row, nil
+  return row, err
 }
 {{else}}
 // {{$q.Name}} returns the result of

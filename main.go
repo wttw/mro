@@ -18,6 +18,7 @@ import (
 var configFile string
 var initFiles bool
 var clean bool
+var defaultPackage string
 var c Config
 var db *pgx.Conn
 
@@ -41,10 +42,7 @@ func main() {
 
 	_, ok := c.TemplateParameters["package"]
 	if !ok {
-		cwd, err := os.Getwd()
-		if err == nil {
-			c.TemplateParameters["package"] = path.Base(cwd)
-		}
+		c.TemplateParameters["package"] = defaultPackage
 	}
 
 	dbCfg, err := pgx.ParseConnectionString(c.ConnectionString)
@@ -91,9 +89,12 @@ func main() {
 }
 
 func init() {
+	cwd, _ := os.Getwd()
+
 	flag.StringVar(&configFile, "config", "mro.cfg", "Read configuration from this file")
 	flag.BoolVar(&clean, "clean", false, "Delete generated files")
 	flag.BoolVar(&initFiles, "bootstrap", false, "Initialize configuration files")
+	flag.StringVar(&defaultPackage, "package", path.Base(cwd), "Generate files for this package")
 }
 
 func tableFilename(t Table) string {

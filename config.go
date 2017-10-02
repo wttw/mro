@@ -10,20 +10,22 @@ type TableConfig struct {
 
 // Config holds all configuration, as serialized from mro.cfg
 type Config struct {
-	ConnectionString   string
-	IncludeTables      []string
-	ExcludeTables      []string
-	Default            TableConfig
-	Table              map[string]TableConfig
-	Types              map[string]string
-	NotNullTypes       map[string]string
-	JsonOutput         string
-	EnumFilename       string
-	EnumTemplate       string
-	TableFilename      string
-	TableTemplate      string
-	TemplateParameters map[string]interface{}
-	Queries            map[string]string
-	ReservedNames      []string
-	PostProcess        []string
+	ConnectionString      string
+	IncludeTables         []string
+	ExcludeTables         []string
+	Default               TableConfig
+	Table                 map[string]TableConfig
+	Types                 map[string]string
+	NotNullTypes          map[string]string
+	JsonOutput            string
+	EnumFilename          string
+	EnumTemplate          string
+	TableFilename         string
+	TableTemplate         string
+	TemplateParameters    map[string]interface{}
+	GeneratePKQueries     bool
+	GenerateUniqueQueries bool
+	Queries               map[string]string
+	ReservedNames         []string
+	PostProcess           []string
 }
