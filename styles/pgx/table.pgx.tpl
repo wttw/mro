@@ -106,7 +106,7 @@ func (t *{{$goname}}) Insert(db MRODB) error {
 func All{{$goname}}(db MRODB) ([]{{$goname}}, error) {
     const sql = `select ` +
       `{{join (maybequote .Table.Fields) ", "}}` +
-      `from {{$stable}}`
+      ` from {{$stable}}`
 
     q, err := db.Query(sql)
     if err != nil {
