@@ -14,7 +14,7 @@ import (
 
 //  {{$goname := goname .Table.Name}}{{$goname}} represents a row from {{.Table.Name}}
 type {{$goname}} struct { {{- range $f := .Table.Fields}}
-  {{goname $f.Name}} {{$f.GoType}} `json:"{{$f.Name}}"`{{end}}
+  {{goname $f.Name}} {{$f.GoType}} `json:"{{$f.Name}}" schema:"{{$f.Name}}"`{{end}}
 }
 
 const {{$goname}}Columns = `{{join (maybequote .Table.Fields) ", "}}`

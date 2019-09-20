@@ -17,7 +17,7 @@ NotNullTypes {
     daterange = "pgtype.Daterange"
     float4 = "float32"
     float8 = "float64"
-    hstore = "pgtype.Hstore"
+#    hstore = "pgtype.Hstore"
     inet = "net.IP"
     integer = "int"
     interval = "time.Duration"
@@ -46,7 +46,7 @@ Types {
     daterange = "pgtype.Daterange"
     float4 = "sql.NullFLoat64"
     float8 = "sql.NullFloat64"
-    hstore = "pgtype.Hstore"
+#    hstore = "pgtype.Hstore"
     inet = "*net.IP"
     "inet[]" = "pgtype.InetArray"
     integer = "sql.NullInt64"
@@ -91,8 +91,11 @@ TemplateParameters {
 # Generate "select * from table where primary_key = ?" queries
 GeneratePKQueries = true
 
-# Generate "select * from table where primary_key = ?" queries
+# Generate "select * from table where column = ?" queries with unique indexes
 GenerateUniqueQueries = true
+
+# Generate "select * from table where fk = ?" for foreign keys
+GenerateFKQueries = true
 
 # Table specific settings
 Table {

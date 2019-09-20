@@ -25,6 +25,7 @@ type Config struct {
 	TemplateParameters    map[string]interface{}
 	GeneratePKQueries     bool
 	GenerateUniqueQueries bool
+	GenerateFKQueries     bool
 	Queries               map[string]string
 	ReservedNames         []string
 	PostProcess           []string

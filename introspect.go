@@ -34,6 +34,14 @@ type Unique struct {
 	Columns    []string
 }
 
+// ForeignKey describes a foreign key
+type ForeignKey struct {
+	Name           string
+	Columns        []string
+	ForeignTable   string
+	ForeignColumns []string
+}
+
 // Query describes a SQL query
 type Query struct {
 	Name          string
@@ -46,15 +54,16 @@ type Query struct {
 
 // Table describes a database table
 type Table struct {
-	oid     uint32
-	Name    string
-	Schema  string
-	Type    string
-	Fields  []Field
-	Indexes []Unique
-	Primary Unique
-	IDField Field
-	Queries []Query
+	oid         uint32
+	Name        string
+	Schema      string
+	Type        string
+	Fields      []Field
+	Indexes     []Unique
+	Primary     Unique
+	IDField     Field
+	Queries     []Query
+	ForeignKeys []ForeignKey
 }
 
 // Enum describes a database enum type
@@ -128,6 +137,12 @@ func introspect() Result {
 
 	// Find unique indexes for each table, synthesize queries
 	err = readIndexes()
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+
+	// Find foreign keys for each table, synthesize queries
+	err = readFKs()
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -367,13 +382,26 @@ func readColumns(oid uint32, tableName string, conf TableConfig) ([]Field, error
 
 	// Explicitly pass NULL instead of atttypmod to format_type as we
 	// don't _really_ care about max length, etc
-	const attrSQL = `select a.attnum, a.attname, format_type(a.atttypid, NULL),` +
-		` a.attnotnull, a.attndims <> 0,` +
-		` a.attname ~* $2 and a.attname !~* $3 and not a.attisdropped,` +
-		` a.atttypid, a.atthasdef` +
-		` from pg_attribute a` +
-		` where a.attrelid = $1` +
-		` order by a.attnum asc`
+	var attrSQL string
+	if dbVersion >= 110000 {
+		// Identity columns were added in 11.0, we treat them as
+		// having a default
+		attrSQL = `select a.attnum, a.attname, format_type(a.atttypid, NULL),` +
+			` a.attnotnull, a.attndims <> 0,` +
+			` a.attname ~* $2 and a.attname !~* $3 and not a.attisdropped,` +
+			` a.atttypid, a.atthasdef or a.attidentity <> ''` +
+			` from pg_attribute a` +
+			` where a.attrelid = $1` +
+			` order by a.attnum asc`
+	} else {
+		attrSQL = `select a.attnum, a.attname, format_type(a.atttypid, NULL),` +
+			` a.attnotnull, a.attndims <> 0,` +
+			` a.attname ~* $2 and a.attname !~* $3 and not a.attisdropped,` +
+			` a.atttypid, a.atthasdef` +
+			` from pg_attribute a` +
+			` where a.attrelid = $1` +
+			` order by a.attnum asc`
+	}
 
 	include := conf.IncludeColumns
 	if len(include) == 0 {
@@ -502,6 +530,65 @@ func readIndexes() error {
 			}
 		}
 		result.Tables[k] = v
+	}
+	return nil
+}
+
+func readFKs() error {
+	for k, table := range result.Tables {
+		q, err := db.Query(`select conname, confrelid, conkey, confkey from pg_constraint where conrelid=$1 and contype='f'`,
+			table.oid)
+		if err != nil {
+			return err
+		}
+
+		for q.Next() {
+			fk := ForeignKey{
+				Columns:        []string{},
+				ForeignColumns: []string{},
+			}
+			conkey := []int16{}
+			confkey := []int16{}
+			var confrelid uint32
+			err = q.Scan(&fk.Name, &confrelid, &conkey, &confkey)
+			if err != nil {
+				return err
+			}
+
+			if len(conkey) == 0 {
+				// ??
+				continue
+			}
+			for _, col := range conkey {
+				if col < 1 || int(col) > len(table.Fields) {
+					return fmt.Errorf("Column %d of foreign key %s outside columns for %s", col, fk.Name, table.Name)
+				}
+				fk.Columns = append(fk.Columns, table.Fields[col-1].Name)
+			}
+
+			for _, foreignTable := range result.Tables {
+				if foreignTable.oid == confrelid {
+					fk.ForeignTable = foreignTable.Name
+					for _, fcol := range confkey {
+						if fcol < 1 || int(fcol) > len(foreignTable.Fields) {
+							return fmt.Errorf("Column %d of foreign key %s outside columns of target table %s", fcol, fk.Name, fk.ForeignTable)
+						}
+						fk.ForeignColumns = append(fk.ForeignColumns, foreignTable.Fields[fcol-1].Name)
+					}
+				}
+			}
+			result.Tables[k].ForeignKeys = append(result.Tables[k].ForeignKeys, fk)
+			if c.GenerateFKQueries {
+				nameParts := []string{table.Name, "by"}
+				paramParts := []string{}
+				for pidx, pname := range fk.Columns {
+					nameParts = append(nameParts, pname)
+					paramParts = append(paramParts, fmt.Sprintf("%s = $%d", maybequote1(pname), pidx+1))
+				}
+				addQuery(goname(strings.Join(nameParts, "_")),
+					fmt.Sprintf("select * from %s where %s", maybequote1(table.Name), strings.Join(paramParts, " and ")))
+			}
+		}
 	}
 	return nil
 }
