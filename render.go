@@ -28,6 +28,16 @@ var funcs = template.FuncMap{
 	"gonames":      gonames,
 	"maybequote":   maybequote,
 	"prefix":       prefix,
+	"wrapname":     wrapname,
+}
+
+func wrapname(fields []Field, pfx, sfx string) []string {
+	//fmt.Fprintf(os.Stderr, "%#v %#v %#v", name, pfx, sfx)
+	var ret []string
+	for _, field := range fields {
+		ret = append(ret, pfx+goname(field.Name))
+	}
+	return ret
 }
 
 func prefix(in []string, pfx string) []string {
@@ -213,7 +223,11 @@ func renderTable(t Table, r Result, tpl *template.Template) error {
 		Param:  c.TemplateParameters,
 	})
 
+	if err != nil {
+		return err
+	}
+
 	tidyFile(filename)
 
-	return err
+	return nil
 }
