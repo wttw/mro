@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/knq/snaker"
+	"github.com/kenshaw/snaker"
 )
 
 var funcs = template.FuncMap{

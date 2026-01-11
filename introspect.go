@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/knq/snaker"
+	"github.com/kenshaw/snaker"
 )
 
 // In case we need to do something version specific
